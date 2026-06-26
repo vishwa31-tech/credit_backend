@@ -1,6 +1,6 @@
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const User = require("../models/User");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
 
 // Register user
 exports.register = async (req, res) => {
@@ -10,7 +10,7 @@ exports.register = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ error: 'Email already registered' });
+      return res.status(400).json({ error: "Email already registered" });
     }
 
     // Hash password
@@ -23,7 +23,7 @@ exports.register = async (req, res) => {
       password: hashedPassword,
       phone,
       city,
-      role: role || 'user',
+      role: role || "user",
     });
 
     await user.save();
@@ -31,12 +31,12 @@ exports.register = async (req, res) => {
     // Generate token
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'your_secret_key',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET || "your_secret_key",
+      { expiresIn: "7d" },
     );
 
     res.status(201).json({
-      message: 'User registered successfully',
+      message: "User registered successfully",
       user: {
         id: user._id,
         name: user.name,
@@ -58,24 +58,24 @@ exports.login = async (req, res) => {
     // Find user
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Check password
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Generate token
     const token = jwt.sign(
       { id: user._id, role: user.role },
-      process.env.JWT_SECRET || 'your_secret_key',
-      { expiresIn: '7d' }
+      process.env.JWT_SECRET || "your_secret_key",
+      { expiresIn: "7d" },
     );
 
     res.json({
-      message: 'Login successful',
+      message: "Login successful",
       user: {
         id: user._id,
         name: user.name,
@@ -92,8 +92,8 @@ exports.login = async (req, res) => {
 // Get user profile
 exports.getProfile = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) return res.status(404).json({ error: 'User not found' });
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) return res.status(404).json({ error: "User not found" });
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -103,7 +103,9 @@ exports.getProfile = async (req, res) => {
 // Update user profile
 exports.updateProfile = async (req, res) => {
   try {
-    const user = await User.findByIdAndUpdate(req.user.id, req.body, { new: true }).select('-password');
+    const user = await User.findByIdAndUpdate(req.user.id, req.body, {
+      new: true,
+    }).select("-password");
     res.json(user);
   } catch (error) {
     res.status(400).json({ error: error.message });

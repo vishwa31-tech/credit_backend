@@ -8,4 +8,5 @@ router.post('/', verifyToken, registrationController.registerForEvent);
 router.get('/my-registrations', verifyToken, registrationController.getUserRegistrations);
 router.put('/:id/cancel', verifyToken, registrationController.cancelRegistration);
 
+
 module.exports = router;
