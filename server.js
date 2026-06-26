@@ -33,6 +33,14 @@ mongoose.connect(mongoURI, {
     process.exit(1);
   });
 
+
+  // Home Route
+app.get("/", (req, res) => {
+  res.json({
+    success: true,
+    message: "EventHub Backend API is running 🚀"
+  });
+});
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
