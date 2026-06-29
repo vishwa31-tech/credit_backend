@@ -1,11 +1,12 @@
 const User = require("../models/User");
+const RoleRequest = require("../models/RoleRequest");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 
-// Register user
+// Register user (Basic signup - all users start as customers)
 exports.register = async (req, res) => {
   try {
-    const { name, email, password, phone, city, role } = req.body;
+    const { name, email, password, phone, city } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -16,14 +17,16 @@ exports.register = async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user - always start as customer
     const user = new User({
       name,
       email,
       password: hashedPassword,
       phone,
       city,
-      role: role || "user",
+      role: 'customer', // Default role
+      status: 'active',
+      secondaryRoles: [],
     });
 
     await user.save();
@@ -36,12 +39,13 @@ exports.register = async (req, res) => {
     );
 
     res.status(201).json({
-      message: "User registered successfully",
+      message: "Account created successfully! Welcome to EventHub.",
       user: {
         id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        status: user.status,
       },
       token,
     });
@@ -81,11 +85,105 @@ exports.login = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        status: user.status,
+        secondaryRoles: user.secondaryRoles || [],
       },
       token,
     });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+// Submit role request (Become a Partner)
+exports.submitRoleRequest = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { requestedRole, formData, documents } = req.body;
+
+    // Validate role
+    const validRoles = ['event-owner', 'job-seeker', 'mahal-owner', 'catering', 'decoration', 'photography', 'others'];
+    if (!validRoles.includes(requestedRole)) {
+      return res.status(400).json({ error: "Invalid role selected" });
+    }
+
+    // Check if user already has this role or has a pending request
+    const user = await User.findById(userId);
+    if (user.secondaryRoles.includes(requestedRole)) {
+      return res.status(400).json({ error: "You already have this role" });
+    }
+
+    const existingRequest = await RoleRequest.findOne({
+      userId,
+      requestedRole,
+      status: 'pending',
+    });
+
+    if (existingRequest) {
+      return res.status(400).json({ error: "You already have a pending request for this role" });
+    }
+
+    // Create role request
+    const roleRequest = new RoleRequest({
+      userId,
+      requestedRole,
+      formData,
+      documents: documents || [],
+      status: 'pending',
+    });
+
+    await roleRequest.save();
+
+    // Update user status to pending if first request
+    if (user.status === 'active') {
+      user.status = 'pending';
+      await user.save();
+    }
+
+    res.status(201).json({
+      message: "Role request submitted successfully. Your application is under review.",
+      requestId: roleRequest._id,
+      estimatedTime: "24-48 hours",
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+};
+
+// Get user's pending role requests
+exports.getPendingRequests = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const requests = await RoleRequest.find({ userId });
+
+    res.json({
+      requests,
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Get request status
+exports.getRequestStatus = async (req, res) => {
+  try {
+    const { requestId } = req.params;
+    const userId = req.user.id;
+
+    const request = await RoleRequest.findById(requestId);
+
+    if (!request) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+
+    if (request.userId.toString() !== userId) {
+      return res.status(403).json({ error: "Unauthorized" });
+    }
+
+    res.json(request);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
 
