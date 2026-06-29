@@ -7,7 +7,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: ["https://credit-frontend-drab.vercel.app/"],
+  origin: ["https://credit-frontend-khaki.vercel.app/"],
   credentials: true,
 }));
 app.use(express.json());
