@@ -173,7 +173,6 @@ exports.getRequestStatus = async (req, res) => {
     const userId = req.user.id;
 
     const request = await RoleRequest.findById(requestId);
-
     if (!request) {
       return res.status(404).json({ error: "Request not found" });
     }
@@ -182,7 +181,9 @@ exports.getRequestStatus = async (req, res) => {
       return res.status(403).json({ error: "Unauthorized" });
     }
 
-    res.json(request);
+    const user = await User.findById(userId).select('-password');
+
+    res.json({ request, user });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
