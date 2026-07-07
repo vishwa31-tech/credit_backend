@@ -134,9 +134,10 @@ exports.submitRoleRequest = async (req, res) => {
 
     await roleRequest.save();
 
-    // Update user status to pending if first request
-    if (user.status === 'active') {
+    // Update user status to pending and clear previous rejection reason
+    if (user.status !== 'pending') {
       user.status = 'pending';
+      user.rejectionReason = undefined;
       await user.save();
     }
 

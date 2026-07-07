@@ -119,6 +119,8 @@ exports.approveRoleRequest = async (req, res) => {
       request.userId._id,
       {
         $addToSet: { secondaryRoles: request.requestedRole },
+        status: 'active',
+        rejectionReason: undefined,
       },
       { new: true }
     );
@@ -161,6 +163,7 @@ exports.rejectRoleRequest = async (req, res) => {
     await User.findByIdAndUpdate(
       request.userId._id,
       {
+        status: request.userId.secondaryRoles?.length > 0 ? 'active' : 'rejected',
         rejectionReason,
       }
     );

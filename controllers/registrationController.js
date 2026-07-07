@@ -1,75 +1,65 @@
-const Registration = require('../models/Registration');
-const Event = require('../models/Event');
+const RoleRequest = require('../models/RoleRequest');
 
-// Register user for event
-exports.registerForEvent = async (req, res) => {
+// Create a new role registration (role request)
+exports.createRoleRequest = async (req, res) => {
   try {
-    const { eventId, ticketCount, specialty, section, selectedFacilities } = req.body;
+    const { requestedRole, formData, documents } = req.body;
 
-    const event = await Event.findById(eventId);
-    if (!event) return res.status(404).json({ error: 'Event not found' });
-    if (event.capacity && event.registrations + ticketCount > event.capacity) {
-      return res.status(400).json({ error: 'Not enough seats available' });
+    if (!requestedRole) {
+      return res.status(400).json({ error: 'Requested role is required' });
     }
 
-    const existingRegistration = await Registration.findOne({
-      user: req.user.id,
-      event: eventId,
-    });
-
-    if (existingRegistration) {
-      return res.status(400).json({ error: 'Already registered for this event' });
+    // Prevent duplicate pending requests for same role
+    const existing = await RoleRequest.findOne({ userId: req.user.id, requestedRole, status: 'pending' });
+    if (existing) {
+      return res.status(400).json({ error: 'You already have a pending application for this role' });
     }
 
-    const registration = new Registration({
-      user: req.user.id,
-      event: eventId,
-      ticketCount,
-      specialty,
-      section,
-      selectedFacilities,
-      totalPrice: ticketCount * event.price,
-      paymentStatus: 'completed',
+    const roleRequest = new RoleRequest({
+      userId: req.user.id,
+      requestedRole,
+      formData: formData || {},
+      documents: Array.isArray(documents) ? documents : [],
+      status: 'pending',
     });
 
-    await registration.save();
-    event.registrations += ticketCount;
-    await event.save();
+    await roleRequest.save();
 
-    res.status(201).json(registration);
-  } catch (error) {
-    res.status(400).json({ error: error.message });
-  }
-};
-
-// Get user registrations
-exports.getUserRegistrations = async (req, res) => {
-  try {
-    const registrations = await Registration.find({ user: req.user.id })
-      .populate('event')
-      .sort({ createdAt: -1 });
-    res.json(registrations);
+    res.status(201).json({ message: 'Role application submitted', roleRequest });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
 
-// Cancel registration
-exports.cancelRegistration = async (req, res) => {
+// Get role requests for the authenticated user
+exports.getUserRoleRequests = async (req, res) => {
   try {
-    const registration = await Registration.findById(req.params.id);
-    if (!registration) {
-      return res.status(404).json({ error: 'Registration not found' });
-    }
-
-    if (registration.user.toString() !== req.user.id) {
-      return res.status(403).json({ error: 'Not authorized' });
-    }
-
-    registration.registrationStatus = 'cancelled';
-    await registration.save();
-    res.json(registration);
+    const requests = await RoleRequest.find({ userId: req.user.id }).sort({ createdAt: -1 });
+    res.json(requests);
   } catch (error) {
-    res.status(400).json({ error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// Withdraw (user-initiated) a pending role request
+exports.withdrawRoleRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const request = await RoleRequest.findById(id);
+    if (!request) return res.status(404).json({ error: 'Request not found' });
+    if (request.userId.toString() !== req.user.id) return res.status(403).json({ error: 'Not authorized' });
+
+    if (request.status !== 'pending') {
+      return res.status(400).json({ error: 'Only pending requests can be withdrawn' });
+    }
+
+    request.status = 'rejected';
+    request.rejectedAt = new Date();
+    request.rejectionReason = 'Withdrawn by user';
+    await request.save();
+
+    res.json({ message: 'Request withdrawn', request });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };
