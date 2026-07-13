@@ -6,8 +6,18 @@ const cors = require('cors');
 const app = express();
 
 // Middleware
+const allowedOrigins = [
+  "https://credit-frontend-khaki.vercel.app",
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+];
 app.use(cors({
-  origin: ["https://credit-frontend-khaki.vercel.app"],
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS policy: Origin ${origin} is not allowed`));
+  },
   credentials: true,
 }));
 app.use(express.json());
