@@ -10,5 +10,6 @@ router.get('/:id', businessController.getBusinessById);
 // Protected routes
 router.post('/', verifyToken, verifyVendor, businessController.createBusiness);
 router.post('/:id/review', verifyToken, businessController.addReview);
+router.post('/:id/book', verifyToken, businessController.createServiceLead);
 
 module.exports = router;
