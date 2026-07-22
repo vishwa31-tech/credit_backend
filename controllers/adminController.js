@@ -4,6 +4,31 @@ const Event = require('../models/Event');
 const Job = require('../models/Job');
 const Registration = require('../models/Registration');
 
+// Server-side admin verification
+exports.checkAdmin = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user || user.role !== 'admin') {
+      return res.status(403).json({ 
+        error: 'Admin access required',
+        isAdmin: false 
+      });
+    }
+    res.json({
+      isAdmin: true,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        status: user.status,
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message, isAdmin: false });
+  }
+};
+
 exports.getDashboard = async (req, res) => {
   try {
     const users = await User.find().select('name email role city createdAt').sort({ createdAt: -1 }).limit(20);

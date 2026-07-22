@@ -4,6 +4,7 @@ const adminController = require('../controllers/adminController');
 const businessController = require('../controllers/businessController');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 
+router.get('/check-admin', verifyToken, verifyAdmin, adminController.checkAdmin);
 router.get('/dashboard', verifyToken, verifyAdmin, adminController.getDashboard);
 
 // Role request management routes
